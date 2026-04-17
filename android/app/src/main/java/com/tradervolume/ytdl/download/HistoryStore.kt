@@ -2,22 +2,21 @@ package com.tradervolume.ytdl.download
 
 import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.UUID
 
-/**
- * Persistent list of completed downloads. Stored as JSON in the app's internal files dir.
- * No external DB, no external libs — just a plain JSON array.
- */
 data class HistoryEntry(
     val id: String,
     val title: String,
     val type: String,          // "VIDEO" | "AUDIO" | "SUBS_SRT" | "SUBS_TXT"
     val mime: String,
-    val uri: String,           // content:// or file://
-    val displayPath: String,   // human-readable, e.g. "Descargas/YouTubeDownloader/foo.mp4"
+    val uri: String,
+    val displayPath: String,
     val sizeBytes: Long,
     val timestampMs: Long,
     val videoId: String?
@@ -55,8 +54,20 @@ object HistoryStore {
 
     private fun file(context: Context): File = File(context.filesDir, FILE_NAME)
 
+    // Flujo reactivo compartido entre Worker (escribe) y UI (lee). Singleton de proceso.
+    private val _flow = MutableStateFlow<List<HistoryEntry>>(emptyList())
+    val flow: StateFlow<List<HistoryEntry>> = _flow.asStateFlow()
+
+    @Volatile private var initialized = false
+
     @Synchronized
-    fun loadAll(context: Context): List<HistoryEntry> {
+    private fun ensureLoaded(context: Context) {
+        if (initialized) return
+        _flow.value = readFromDisk(context)
+        initialized = true
+    }
+
+    private fun readFromDisk(context: Context): List<HistoryEntry> {
         val f = file(context)
         if (!f.exists()) return emptyList()
         return try {
@@ -66,6 +77,12 @@ object HistoryStore {
         } catch (_: Exception) {
             emptyList()
         }
+    }
+
+    @Synchronized
+    fun loadAll(context: Context): List<HistoryEntry> {
+        ensureLoaded(context)
+        return _flow.value
     }
 
     @Synchronized
@@ -79,6 +96,7 @@ object HistoryStore {
         sizeBytes: Long,
         videoId: String?
     ): HistoryEntry {
+        ensureLoaded(context)
         val uriString = when {
             uri != null -> uri.toString()
             fileFallback != null -> Uri.fromFile(fileFallback).toString()
@@ -97,23 +115,26 @@ object HistoryStore {
             timestampMs = System.currentTimeMillis(),
             videoId = videoId
         )
-        val all = loadAll(context).toMutableList()
+        val all = _flow.value.toMutableList()
         all.add(0, entry)
-        if (all.size > MAX_ENTRIES) {
-            while (all.size > MAX_ENTRIES) all.removeAt(all.size - 1)
-        }
+        while (all.size > MAX_ENTRIES) all.removeAt(all.size - 1)
+        _flow.value = all.toList()
         saveAll(context, all)
         return entry
     }
 
     @Synchronized
     fun remove(context: Context, id: String) {
-        val all = loadAll(context).filter { it.id != id }
+        ensureLoaded(context)
+        val all = _flow.value.filter { it.id != id }
+        _flow.value = all
         saveAll(context, all)
     }
 
     @Synchronized
     fun clear(context: Context) {
+        _flow.value = emptyList()
+        initialized = true
         file(context).delete()
     }
 

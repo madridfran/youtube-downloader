@@ -47,21 +47,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = DownloadRepository(app)
 
-    // ---- Historial observable ----
-    private val _history = MutableStateFlow<List<HistoryEntry>>(emptyList())
-    val history: StateFlow<List<HistoryEntry>> = _history.asStateFlow()
+    // ---- Historial observable (reactivo: lo alimenta HistoryStore.flow) ----
+    val history: StateFlow<List<HistoryEntry>> = HistoryStore.flow
 
     // ---- Playlist preview ----
     private val _playlist = MutableStateFlow(PlaylistState())
     val playlist: StateFlow<PlaylistState> = _playlist.asStateFlow()
 
-    init { reloadHistory() }
+    init {
+        // Carga inicial del flow desde disco (idempotente)
+        viewModelScope.launch(Dispatchers.IO) {
+            HistoryStore.loadAll(getApplication<Application>().applicationContext)
+        }
+    }
 
     fun reloadHistory() {
-        viewModelScope.launch {
-            _history.value = withContext(Dispatchers.IO) {
-                HistoryStore.loadAll(getApplication<Application>().applicationContext)
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            HistoryStore.loadAll(getApplication<Application>().applicationContext)
         }
     }
 
