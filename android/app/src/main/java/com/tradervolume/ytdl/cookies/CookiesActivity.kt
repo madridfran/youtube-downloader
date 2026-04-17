@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import com.tradervolume.ytdl.ui.theme.YDownTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +35,7 @@ class CookiesActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val store = CookiesStore(this)
         setContent {
-            MaterialTheme {
+            YDownTheme {
                 CookiesWebViewScreen(
                     initialCookie = store.loadCookieHeader().orEmpty(),
                     onSave = { header ->

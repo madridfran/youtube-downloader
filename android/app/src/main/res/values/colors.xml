@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="yd_red">#FFFF0033</color>
+    <color name="yd_red_dark">#FFCC0029</color>
+    <color name="yd_green">#FF9CFF8A</color>
+    <color name="yd_bg">#FF0A0A0A</color>
+    <color name="yd_surface">#FF141414</color>
+    <color name="yd_on_surface">#FFE8E8E8</color>
+    <color name="yd_on_surface_variant">#FFB5B5B5</color>
+</resources>

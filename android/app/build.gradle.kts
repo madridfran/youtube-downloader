@@ -98,6 +98,9 @@ dependencies {
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
+    // Coil (miniaturas de YouTube vía URL)
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
     // Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

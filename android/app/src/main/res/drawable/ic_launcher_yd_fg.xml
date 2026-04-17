@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Letra Y (verde claro) -->
+    <path
+        android:fillColor="#9CFF8A"
+        android:pathData="M33,38 L42,38 L49,54 L56,38 L65,38 L53,62 L53,78 L45,78 L45,62 Z" />
+    <!-- Letra D (verde claro) con agujero interior via fillType evenOdd -->
+    <path
+        android:fillColor="#9CFF8A"
+        android:fillType="evenOdd"
+        android:pathData="M63,38 L75,38 C 87,38 92,47 92,58 C 92,70 87,78 75,78 L63,78 Z
+                          M70,44 L70,72 L75,72 C 82,72 86,66 86,58 C 86,50 82,44 75,44 Z" />
+</vector>
