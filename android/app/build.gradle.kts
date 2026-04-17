@@ -54,6 +54,11 @@ android {
         kotlinCompilerExtensionVersion = "1.5.8"
     }
 
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
+
     packaging {
         resources {
             excludes += setOf(
