@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="tg_cyan">#FF00F2EA</color>
+    <color name="tg_pink">#FFFE2C55</color>
+    <color name="tg_bg">#FF000000</color>
+    <color name="tg_surface">#FF121212</color>
+    <color name="tg_on_surface">#FFEDEDED</color>
+</resources>

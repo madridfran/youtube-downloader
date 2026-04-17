@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.TikGet" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/tg_bg</item>
+        <item name="android:statusBarColor">@color/tg_bg</item>
+        <item name="android:navigationBarColor">@color/tg_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

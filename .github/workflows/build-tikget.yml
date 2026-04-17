@@ -1,10 +1,10 @@
-name: Build Android APK
+name: Build TikGet APK
 
 on:
   push:
     paths:
-      - 'android/**'
-      - '.github/workflows/build-apk.yml'
+      - 'android_tiktok/**'
+      - '.github/workflows/build-tikget.yml'
   workflow_dispatch:
 
 jobs:
@@ -31,9 +31,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          key: gradle-tikget-${{ runner.os }}-${{ hashFiles('android_tiktok/**/*.gradle*', 'android_tiktok/**/gradle-wrapper.properties') }}
           restore-keys: |
-            gradle-${{ runner.os }}-
+            gradle-tikget-${{ runner.os }}-
 
       - name: Ensure system Gradle is available (for wrapper bootstrap)
         run: |
@@ -46,7 +46,7 @@ jobs:
           gradle --version
 
       - name: Generate Gradle wrapper if missing
-        working-directory: android
+        working-directory: android_tiktok
         run: |
           if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || [ ! -f gradlew ]; then
             echo "Wrapper jar/gradlew missing. Generating via system Gradle…"
@@ -55,7 +55,7 @@ jobs:
           chmod +x gradlew
           ls -la gradle/wrapper gradlew
 
-      - name: Generate debug keystore (used to sign release APK)
+      - name: Generate debug keystore
         run: |
           mkdir -p ~/.android
           if [ ! -f ~/.android/debug.keystore ]; then
@@ -69,12 +69,12 @@ jobs:
           fi
 
       - name: Build release APK
-        working-directory: android
+        working-directory: android_tiktok
         run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: List output APKs
         if: always()
-        working-directory: android
+        working-directory: android_tiktok
         run: |
           echo "== app/build/outputs/apk =="
           find app/build/outputs -name '*.apk' -print || true
@@ -83,8 +83,8 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: youtube-downloader-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          name: tikget-apk
+          path: android_tiktok/app/build/outputs/apk/release/*.apk
           retention-days: 30
           if-no-files-found: error
 
@@ -92,9 +92,9 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-reports
+          name: tikget-build-reports
           path: |
-            android/app/build/reports/
-            android/build/reports/
+            android_tiktok/app/build/reports/
+            android_tiktok/build/reports/
           retention-days: 7
           if-no-files-found: ignore

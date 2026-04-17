@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Glitch rosa (capa detrás, desplazada -2,-2) -->
+    <path
+        android:fillColor="#FE2C55"
+        android:pathData="M18,32 L52,32 L52,40 L39,40 L39,78 L31,78 L31,40 L18,40 Z" />
+    <path
+        android:fillColor="#FE2C55"
+        android:pathData="M58,32 L90,32 L90,40 L66,40 L66,70 L84,70 L84,60 L76,60 L76,54 L92,54 L92,78 L58,78 Z" />
+    <!-- Cian (capa frontal) -->
+    <path
+        android:fillColor="#00F2EA"
+        android:pathData="M22,36 L56,36 L56,44 L43,44 L43,82 L35,82 L35,44 L22,44 Z" />
+    <path
+        android:fillColor="#00F2EA"
+        android:pathData="M62,36 L94,36 L94,44 L70,44 L70,74 L88,74 L88,64 L80,64 L80,58 L96,58 L96,82 L62,82 Z" />
+</vector>
