@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile v7.0_descargador_youtube_gui.py)",
+      "Bash(python v7.0_descargador_youtube_gui.py)",
+      "Bash(python -c \"data=open\\('YouTube_Downloader_v7.bat','rb'\\).read\\(\\); print\\('Non-ASCII bytes:', [b for b in data if b>127][:20]\\); print\\('Size:', len\\(data\\)\\)\")",
+      "Bash(python -m py_compile v7.0_descargador_youtube_gui.py bootstrap.py licensing.py)",
+      "Bash(python -m py_compile bootstrap.py v7.0_descargador_youtube_gui.py)",
+      "Bash(mkdir -p sistema)",
+      "Bash(mv v7.0_descargador_youtube_gui.py bootstrap.py licensing.py build.spec installer.iss build_exe_x64.bat build_exe_arm64.bat requirements.txt sistema/)",
+      "Bash(mv build.bat sistema/build.bat)",
+      "Bash(rm -rf __pycache__ build dist build.log run.log)",
+      "Bash(mv yt_downloader_config.json sistema/yt_downloader_config.json)",
+      "Bash(python -m py_compile v7.0_descargador_youtube_gui.py cookies_cache.py)",
+      "Bash(winget --version)",
+      "Bash(choco --version)",
+      "mcp__mcp-registry__search_mcp_registry",
+      "Bash(git --version)",
+      "Bash(where git *)"
+    ]
+  }
+}
