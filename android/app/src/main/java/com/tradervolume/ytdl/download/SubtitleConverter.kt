@@ -44,4 +44,32 @@ object SubtitleConverter {
          .replace(Regex("""&amp;"""), "&")
          .replace(Regex("""&lt;"""), "<")
          .replace(Regex("""&gt;"""), ">")
+
+    /**
+     * Convert SRT to plain TXT: remove cue numbers, timecodes and blank separators,
+     * keep only the spoken text (joined with line breaks). Collapses duplicate adjacent lines.
+     */
+    fun srtToTxt(srt: String): String {
+        val timecode = Regex("""^\d{2}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[,.]\d{3}.*""")
+        val cueNumber = Regex("""^\d+$""")
+        val sb = StringBuilder()
+        var lastLine = ""
+        for (raw in srt.lines()) {
+            val line = raw.trim()
+            if (line.isEmpty()) continue
+            if (cueNumber.matches(line)) continue
+            if (timecode.matches(line)) continue
+            val clean = line
+                .replace(Regex("""<[^>]*>"""), "")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .trim()
+            if (clean.isEmpty()) continue
+            if (clean == lastLine) continue
+            sb.append(clean).append('\n')
+            lastLine = clean
+        }
+        return sb.toString()
+    }
 }

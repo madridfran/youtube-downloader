@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tradervolume.ytdl.download.SubsFormat
 import com.tradervolume.ytdl.ui.MainViewModel
 
 /**
@@ -84,7 +85,9 @@ private fun PantallaPrincipal(urlInicial: String?) {
     val vm: MainViewModel = viewModel()
     var url by remember { mutableStateOf(urlInicial ?: "") }
     var ultimaAccion by remember { mutableStateOf<String?>(null) }
+    var subsEnTxt by remember { mutableStateOf(false) }
     val scroll = rememberScrollState()
+    val subsFormat = if (subsEnTxt) SubsFormat.TXT else SubsFormat.SRT
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -135,17 +138,31 @@ private fun PantallaPrincipal(urlInicial: String?) {
             BotonOpcion("Audio (M4A — calidad original)") {
                 vm.onAudioMp3(url); ultimaAccion = "Audio encolado"
             }
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Switch(checked = subsEnTxt, onCheckedChange = { subsEnTxt = it })
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (subsEnTxt) "Subtítulos en TXT (sin tiempos)"
+                    else "Subtítulos en SRT (con tiempos)",
+                    fontSize = 13.sp
+                )
+            }
+
             BotonOpcion("Subtítulos — Español") {
-                vm.onSubtitles(url, setOf("es")); ultimaAccion = "Subtítulos ES encolados"
+                vm.onSubtitles(url, setOf("es"), subsFormat)
+                ultimaAccion = "Subtítulos ES encolados (${subsFormat.name})"
             }
             BotonOpcion("Subtítulos — Inglés") {
-                vm.onSubtitles(url, setOf("en")); ultimaAccion = "Subtítulos EN encolados"
+                vm.onSubtitles(url, setOf("en"), subsFormat)
+                ultimaAccion = "Subtítulos EN encolados (${subsFormat.name})"
             }
             BotonOpcion("Subtítulos ES + EN") {
-                vm.onSubtitles(url, setOf("es", "en")); ultimaAccion = "Subtítulos ES+EN encolados"
+                vm.onSubtitles(url, setOf("es", "en"), subsFormat)
+                ultimaAccion = "Subtítulos ES+EN encolados (${subsFormat.name})"
             }
             BotonOpcion("Subtítulos + Vídeo") {
-                vm.onVideoPlusSubs(url); ultimaAccion = "Vídeo + subtítulos encolados"
+                vm.onVideoPlusSubs(url, setOf("es", "en"), subsFormat)
+                ultimaAccion = "Vídeo + subtítulos encolados (${subsFormat.name})"
             }
 
             Spacer(Modifier.height(8.dp))
@@ -162,6 +179,11 @@ private fun PantallaPrincipal(urlInicial: String?) {
             }
 
             Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { vm.openHistory() },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Historial de descargas") }
+
             OutlinedButton(
                 onClick = { vm.openCookiesSettings() },
                 modifier = Modifier.fillMaxWidth()

@@ -56,6 +56,21 @@
             android:exported="false"
             android:label="Cookies" />
 
+        <activity
+            android:name=".ui.HistoryActivity"
+            android:exported="false"
+            android:label="Historial" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Override WorkManager's SystemForegroundService to declare the
              foregroundServiceType required by Android 14+ and by lint. -->
         <service
