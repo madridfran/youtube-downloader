@@ -78,11 +78,20 @@ class DownloadWorker(
             )
             Result.success()
         } catch (e: Exception) {
+            android.util.Log.e("YTDL", "Descarga fallida", e)
+            val detalle = buildString {
+                append(e.javaClass.simpleName)
+                e.message?.let { append(": "); append(it) }
+                e.cause?.let {
+                    append(" | causa: ").append(it.javaClass.simpleName)
+                    it.message?.let { m -> append(": ").append(m) }
+                }
+            }.take(240)
             NotificationManagerCompat.from(applicationContext).notify(
                 NotificationHelper.NOTIF_ID + 1,
-                NotificationHelper.done(applicationContext, "Descarga fallida", e.message.orEmpty().take(180)).build()
+                NotificationHelper.done(applicationContext, "Descarga fallida", detalle).build()
             )
-            Result.failure(workDataOf("error" to (e.message ?: e.javaClass.simpleName)))
+            Result.failure(workDataOf("error" to detalle))
         }
     }
 

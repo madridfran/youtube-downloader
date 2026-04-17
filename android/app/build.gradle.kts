@@ -73,6 +73,12 @@ android {
     }
 }
 
+configurations.all {
+    // No cachear artefactos SNAPSHOT: siempre coger la versión más reciente de JitPack.
+    resolutionStrategy.cacheChangingModulesFor(0, "seconds")
+    resolutionStrategy.cacheDynamicVersionsFor(0, "seconds")
+}
+
 dependencies {
     // AndroidX core
     implementation("androidx.core:core-ktx:1.12.0")
@@ -96,7 +102,15 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // NewPipeExtractor (via JitPack)
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.24.4")
+    // Usamos la rama dev para tener los últimos parches del cifrado de YouTube.
+    // Si YouTube rompe el extractor, bumpea esta línea a la última tag estable
+    // desde https://github.com/TeamNewPipe/NewPipeExtractor/releases
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:dev-SNAPSHOT") {
+        isChanging = true
+    }
+    // Rhino motor JS que NewPipe usa para desofuscar el signatureCipher.
+    // Lo declaramos explícito por si JitPack no pasa la dep transitiva.
+    implementation("org.mozilla:rhino:1.7.14")
 
     // FFmpegKit: el artefacto com.arthenica:ffmpeg-kit-audio fue retirado
     // de Maven Central en 2025. En v1 se descarga el audio nativo (m4a) sin
