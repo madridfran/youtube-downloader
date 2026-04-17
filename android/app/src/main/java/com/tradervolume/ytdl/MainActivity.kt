@@ -132,8 +132,8 @@ private fun PantallaPrincipal(urlInicial: String?) {
             BotonOpcion("Vídeo (MP4)") {
                 vm.onVideo(url); ultimaAccion = "Vídeo encolado"
             }
-            BotonOpcion("Audio (MP3 192 kbps)") {
-                vm.onAudioMp3(url); ultimaAccion = "MP3 encolado"
+            BotonOpcion("Audio (M4A — calidad original)") {
+                vm.onAudioMp3(url); ultimaAccion = "Audio encolado"
             }
             BotonOpcion("Subtítulos — Español") {
                 vm.onSubtitles(url, setOf("es")); ultimaAccion = "Subtítulos ES encolados"

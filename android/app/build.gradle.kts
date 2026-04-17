@@ -93,8 +93,9 @@ dependencies {
     // NewPipeExtractor (via JitPack)
     implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.24.4")
 
-    // FFmpegKit (audio package includes libmp3lame).
-    implementation("com.arthenica:ffmpeg-kit-audio:6.0-2.LTS")
+    // FFmpegKit: el artefacto com.arthenica:ffmpeg-kit-audio fue retirado
+    // de Maven Central en 2025. En v1 se descarga el audio nativo (m4a) sin
+    // reconvertir a MP3. La conversión real llega en v1.1 con un fork mantenido.
 
     // EncryptedSharedPreferences for cookie storage
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

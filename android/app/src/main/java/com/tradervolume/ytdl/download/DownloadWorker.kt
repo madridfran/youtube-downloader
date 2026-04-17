@@ -7,8 +7,6 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.ReturnCode
 import com.tradervolume.ytdl.cookies.CookiesStore
 import com.tradervolume.ytdl.extractor.ExtractedContent
 import com.tradervolume.ytdl.extractor.OkHttpDownloader
@@ -18,7 +16,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.schabi.newpipe.extractor.stream.StreamInfo
-import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
@@ -120,33 +117,25 @@ class DownloadWorker(
         FileLocationResolver.markComplete(applicationContext, target)
     }
 
-    private suspend fun downloadAudioMp3(info: StreamInfo, title: String, vid: String, index: Int?) {
+    private fun downloadAudioMp3(info: StreamInfo, title: String, vid: String, index: Int?) {
+        // v1: se guarda el stream de audio nativo (m4a normalmente) sin reconvertir.
+        // La conversión real a MP3 con FFmpeg llegará en v1.1; el artefacto
+        // com.arthenica:ffmpeg-kit-audio dejó de publicarse en Maven Central.
         val audio = extractor.pickBestAudio(info) ?: throw IllegalStateException("Sin stream de audio")
-        val srcExt = (audio.format?.suffix ?: "webm").lowercase()
-
-        val cacheDir = File(applicationContext.cacheDir, "dl").apply { mkdirs() }
-        val staged = File(cacheDir, "audio_${vid}_${System.currentTimeMillis()}.$srcExt")
-        try {
-            httpDownloadToFile(audio.content ?: audio.url!!, staged, "Audio $title")
-
-            setForeground(foregroundInfo("Convirtiendo MP3… $title", 0))
-            val mp3Cache = File(cacheDir, "audio_${vid}_${System.currentTimeMillis()}.mp3")
-            val cmd = "-y -i \"${staged.absolutePath}\" -vn -c:a libmp3lame -b:a 192k \"${mp3Cache.absolutePath}\""
-            val session = FFmpegKit.execute(cmd)
-            if (!ReturnCode.isSuccess(session.returnCode)) {
-                throw IllegalStateException("FFmpeg falló: rc=${session.returnCode} log=${session.allLogsAsString?.take(400)}")
-            }
-
-            val finalName = NameSanitizer.build(index, title, vid, "mp3")
-            val target = FileLocationResolver.createOutput(applicationContext, finalName, "audio/mpeg")
-            FileLocationResolver.openOutputStream(applicationContext, target).use { out ->
-                mp3Cache.inputStream().use { it.copyTo(out) }
-            }
-            FileLocationResolver.markComplete(applicationContext, target)
-            mp3Cache.delete()
-        } finally {
-            if (staged.exists()) staged.delete()
+        val srcExt = (audio.format?.suffix ?: "m4a").lowercase()
+        val mime = when (srcExt) {
+            "m4a", "mp4" -> "audio/mp4"
+            "webm" -> "audio/webm"
+            "opus" -> "audio/ogg"
+            "mp3"  -> "audio/mpeg"
+            else -> "audio/*"
         }
+        val name = NameSanitizer.build(index, title, vid, srcExt)
+        val target = FileLocationResolver.createOutput(applicationContext, name, mime)
+        val streamUrl = audio.content ?: audio.url
+            ?: throw IllegalStateException("Stream URL vacío para audio")
+        httpDownload(streamUrl, target, "Audio $title", isFinal = true)
+        FileLocationResolver.markComplete(applicationContext, target)
     }
 
     private fun downloadSubtitles(info: StreamInfo, title: String, vid: String, index: Int?, langs: Set<String>) {
@@ -180,16 +169,6 @@ class DownloadWorker(
             val input = resp.body!!.byteStream()
             val out = FileLocationResolver.openOutputStream(applicationContext, target)
             copyWithProgress(input, out, total, title)
-        }
-    }
-
-    private fun httpDownloadToFile(url: String, file: File, title: String) {
-        val req = buildRequest(url)
-        client.newCall(req).execute().use { resp ->
-            if (!resp.isSuccessful) throw IllegalStateException("HTTP ${resp.code} descargando")
-            val total = resp.body?.contentLength() ?: -1L
-            val input = resp.body!!.byteStream()
-            file.outputStream().use { out -> copyWithProgress(input, out, total, title) }
         }
     }
 
