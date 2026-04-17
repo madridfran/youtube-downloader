@@ -13,15 +13,30 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
+        vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        create("releaseDebugSigned") {
+            val ks = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            if (ks.exists()) {
+                storeFile = ks
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("releaseDebugSigned")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        debug {
+            isMinifyEnabled = false
         }
     }
 
@@ -31,35 +46,64 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 
-    buildFeatures { compose = true }
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
+    }
+
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/AL2.0",
+                "META-INF/LGPL2.1",
+                "META-INF/INDEX.LIST",
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE*",
+                "META-INF/NOTICE*"
+            )
+        }
+    }
 }
 
 dependencies {
-    // Compose
-    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
-    implementation(composeBom)
+    // AndroidX core
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+
+    // Compose BOM
+    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
     implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    implementation("androidx.activity:activity-compose:1.9.0")
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.2")
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-    // Extracción YouTube — NewPipeExtractor vía JitPack
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.24.2")
-
-    // HTTP (para NewPipe downloader interface)
+    // Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // Cookies cifradas
+    // NewPipeExtractor (via JitPack)
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.24.4")
+
+    // FFmpegKit (audio package includes libmp3lame).
+    implementation("com.arthenica:ffmpeg-kit-audio:6.0-2.LTS")
+
+    // EncryptedSharedPreferences for cookie storage
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // FFmpeg (audio → mp3). ~20 MB añadidos al APK.
-    implementation("com.arthenica:ffmpeg-kit-audio:6.0-2")
+    // WebView helpers
+    implementation("androidx.webkit:webkit:1.10.0")
 
-    // Corrutinas
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    testImplementation("junit:junit:4.13.2")
 }

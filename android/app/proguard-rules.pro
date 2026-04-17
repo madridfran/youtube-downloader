@@ -1,8 +1,11 @@
-# Rules para el modo release. Anade aqui reglas especificas segun aparezcan.
+# Kept for future use. isMinifyEnabled=false in release right now, so these are inert,
+# but already correct for when you want to enable shrinking.
 
-# NewPipeExtractor usa reflection para sus services
 -keep class org.schabi.newpipe.extractor.** { *; }
--keep interface org.schabi.newpipe.extractor.** { *; }
+-keep class org.mozilla.javascript.** { *; }
+-keep class org.jsoup.** { *; }
+-keep class com.arthenica.ffmpegkit.** { *; }
 
-# Kotlin metadata
--keep class kotlin.Metadata { *; }
+-dontwarn org.mozilla.javascript.**
+-dontwarn javax.annotation.**
+-dontwarn org.slf4j.**

@@ -27,6 +27,9 @@ android/.cxx/
 android/*.jks
 android/*.keystore
 
+# Cowork output (zip + extracted)
+cowork/
+
 # Editor
 .vscode/
 .idea/
