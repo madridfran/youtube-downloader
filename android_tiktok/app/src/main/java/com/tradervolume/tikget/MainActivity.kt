@@ -20,9 +20,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -129,8 +132,6 @@ private fun PantallaPrincipal(urlInicial: String?) {
             val ultimo = history.firstOrNull()
             if (ultimo != null) UltimoDescargadoHero(entry = ultimo)
 
-            if (history.size > 1) TiraHistorial(entries = history, onVerTodo = { vm.openHistory() })
-
             Divider(color = Color(0xFF222222))
 
             Text("¿Qué quieres descargar?", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
@@ -176,6 +177,11 @@ private fun PantallaPrincipal(urlInicial: String?) {
                         fontSize = 13.sp
                     )
                 }
+            }
+
+            // Tira de miniaturas estilo Rposty: debajo de los botones
+            if (history.size > 1) {
+                TiraHistorial(entries = history, onVerTodo = { vm.openHistory() })
             }
 
             Spacer(Modifier.height(12.dp))
@@ -268,43 +274,148 @@ private fun UltimoDescargadoHero(entry: HistoryEntry) {
         colors = CardDefaults.cardColors(containerColor = TgSurface),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Column {
+        // Layout horizontal compacto: miniatura izquierda, título + acciones derecha.
+        Row(Modifier.padding(10.dp)) {
             TikThumb(
                 thumbnailUrl = entry.thumbnailUrl,
-                modifier = Modifier.fillMaxWidth().aspectRatio(9f / 16f).heightIn(max = 340.dp),
-                cornerRadius = 0.dp
+                modifier = Modifier.size(width = 100.dp, height = 140.dp),
+                cornerRadius = 10.dp
             )
-            Column(Modifier.padding(12.dp)) {
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
                 Text(
                     entry.title,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(8.dp))
+                // Fila 1: Open + Share
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(
-                        onClick = { ShareHelper.openFile(ctx, entry) },
-                        modifier = Modifier.weight(1f).height(40.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = TgCyan, contentColor = Color.Black),
-                        shape = RoundedCornerShape(10.dp)
-                    ) { Text("Abrir", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-                    Button(
-                        onClick = { ctx.startActivity(ShareHelper.buildShareChooser(ctx, entry)) },
-                        modifier = Modifier.weight(1f).height(40.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = TgCyan, contentColor = Color.Black),
-                        shape = RoundedCornerShape(10.dp)
-                    ) { Text("Compartir", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                    AccionIcono(
+                        texto = "Open",
+                        icono = Icons.Filled.FolderOpen,
+                        bg = TgCyan,
+                        fg = Color.Black,
+                        modifier = Modifier.weight(1f)
+                    ) { ShareHelper.openFile(ctx, entry) }
+                    AccionIcono(
+                        texto = "Share",
+                        icono = Icons.Filled.Share,
+                        bg = TgCyan,
+                        fg = Color.Black,
+                        modifier = Modifier.weight(1f)
+                    ) { ctx.startActivity(ShareHelper.buildShareChooser(ctx, entry)) }
                 }
                 Spacer(Modifier.height(6.dp))
+                // Fila 2: chips de marca
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    ChipShare("WhatsApp", Modifier.weight(1f)) { ShareHelper.shareTo(ctx, entry, ShareHelper.PKG_WHATSAPP) }
-                    ChipShare("Telegram", Modifier.weight(1f)) { ShareHelper.shareTo(ctx, entry, ShareHelper.PKG_TELEGRAM) }
-                    ChipShare("Instagram", Modifier.weight(1f)) { ShareHelper.shareTo(ctx, entry, ShareHelper.PKG_INSTAGRAM) }
+                    ChipWhatsApp(Modifier.weight(1f)) { ShareHelper.shareTo(ctx, entry, ShareHelper.PKG_WHATSAPP) }
+                    ChipTelegram(Modifier.weight(1f)) { ShareHelper.shareTo(ctx, entry, ShareHelper.PKG_TELEGRAM) }
+                    ChipInstagram(Modifier.weight(1f)) { ShareHelper.shareTo(ctx, entry, ShareHelper.PKG_INSTAGRAM) }
                 }
             }
         }
+    }
+}
+
+// --- Acción genérica con icono (Open / Share) ---
+@Composable
+private fun AccionIcono(
+    texto: String,
+    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    bg: Color,
+    fg: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(38.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = bg, contentColor = fg),
+        shape = RoundedCornerShape(10.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp)
+    ) {
+        Icon(icono, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(texto, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+// --- Chips de marca ---
+private val WA_GREEN = Color(0xFF25D366)
+private val TG_BLUE = Color(0xFF229ED9)
+private val IG_GRADIENT = listOf(
+    Color(0xFFF58529), Color(0xFFDD2A7B), Color(0xFF8134AF), Color(0xFF515BD4)
+)
+
+@Composable
+private fun ChipMarca(
+    letra: String,
+    texto: String,
+    color: Color,
+    contentColor: Color = Color.White,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier
+            .height(36.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(color)
+            .clickable { onClick() }
+            .padding(horizontal = 6.dp)
+    ) {
+        // Burbuja blanca con la letra (evoca el logo sin cargar SVG propietario).
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(letra, color = color, fontWeight = FontWeight.Black, fontSize = 12.sp)
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(texto, color = contentColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun ChipWhatsApp(modifier: Modifier = Modifier, onClick: () -> Unit) =
+    ChipMarca(letra = "W", texto = "WhatsApp", color = WA_GREEN, modifier = modifier, onClick = onClick)
+
+@Composable
+private fun ChipTelegram(modifier: Modifier = Modifier, onClick: () -> Unit) =
+    ChipMarca(letra = "T", texto = "Telegram", color = TG_BLUE, modifier = modifier, onClick = onClick)
+
+@Composable
+private fun ChipInstagram(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    // Instagram usa el famoso gradiente — fondo degradado, burbuja blanca con IG.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier
+            .height(36.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Brush.linearGradient(IG_GRADIENT))
+            .clickable { onClick() }
+            .padding(horizontal = 6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("IG", color = Color(0xFFDD2A7B), fontWeight = FontWeight.Black, fontSize = 9.sp)
+        }
+        Spacer(Modifier.width(6.dp))
+        Text("Instagram", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -370,20 +481,6 @@ private fun BotonRosa(texto: String, modifier: Modifier = Modifier, onClick: () 
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(containerColor = TgPink, contentColor = Color.White)
     ) { Text(texto, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
-}
-
-@Composable
-private fun ChipShare(texto: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(
-        modifier = modifier
-            .height(34.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, Color(0xFF2F2F2F), RoundedCornerShape(8.dp))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(texto, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
-    }
 }
 
 @Composable
