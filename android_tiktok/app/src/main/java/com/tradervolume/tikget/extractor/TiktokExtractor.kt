@@ -39,10 +39,11 @@ data class TikMedia(
  * Todas las llamadas son bloqueantes; llamar desde Dispatchers.IO.
  */
 class TiktokExtractor(
-    private val cookieProvider: () -> String? = { null }
+    private val cookieProvider: () -> String? = { null },
+    client: OkHttpClient? = null
 ) {
 
-    private val client: OkHttpClient = OkHttpClient.Builder()
+    private val client: OkHttpClient = client ?: OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(60, TimeUnit.SECONDS)

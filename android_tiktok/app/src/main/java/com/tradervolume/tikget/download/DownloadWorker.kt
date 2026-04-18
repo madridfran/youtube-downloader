@@ -12,10 +12,13 @@ import com.tradervolume.tikget.extractor.TikMedia
 import com.tradervolume.tikget.extractor.TiktokExtractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.JavaNetCookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.CookieManager
+import java.net.CookiePolicy
 import java.util.concurrent.TimeUnit
 
 class DownloadWorker(
@@ -28,22 +31,34 @@ class DownloadWorker(
         const val KEY_MODE = "mode"
     }
 
+    // CookieJar compartido: TikTok emite cookies (tt_chain_token, etc.) al
+    // servir la página y el CDN (*.tiktokcdn.com) las exige para no devolver 403.
+    private val cookieJar = JavaNetCookieJar(
+        CookieManager().apply { setCookiePolicy(CookiePolicy.ACCEPT_ALL) }
+    )
+
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(120, TimeUnit.SECONDS)
             .callTimeout(0, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
+            .cookieJar(cookieJar)
             .build()
     }
 
     private val cookiesStore by lazy { CookiesStore(applicationContext) }
     private val extractor by lazy {
-        TiktokExtractor(cookieProvider = { cookiesStore.loadCookieHeader() })
+        TiktokExtractor(
+            cookieProvider = { cookiesStore.loadCookieHeader() },
+            client = client
+        )
     }
 
+    // UA escritorio idéntico al del extractor: TikTok CDN valida coherencia UA/cookies.
     private val userAgent =
-        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122 Mobile Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val url = inputData.getString(KEY_URL) ?: return@withContext Result.failure()
@@ -169,13 +184,23 @@ class DownloadWorker(
             .url(url)
             .header("User-Agent", userAgent)
             .header("Referer", referer)
+            .header("Accept", "*/*")
+            .header("Accept-Language", "es-ES,es;q=0.9,en;q=0.8")
+            .header("Range", "bytes=0-")
+            .header("Sec-Fetch-Dest", "video")
+            .header("Sec-Fetch-Mode", "no-cors")
+            .header("Sec-Fetch-Site", "same-site")
             .apply {
+                // Cookies manuales del login (si hay) — añadimos al CookieJar.
                 cookiesStore.loadCookieHeader()?.takeIf { it.isNotBlank() }
                     ?.let { header("Cookie", it) }
             }
             .build()
         client.newCall(req).execute().use { resp ->
-            if (!resp.isSuccessful) throw IllegalStateException("HTTP ${resp.code} descargando")
+            // 200 OK o 206 Partial Content son válidos (pedimos Range).
+            if (!resp.isSuccessful && resp.code != 206) {
+                throw IllegalStateException("HTTP ${resp.code} descargando")
+            }
             val total = resp.body?.contentLength() ?: -1L
             val input = resp.body!!.byteStream()
             val out = FileLocationResolver.openOutputStream(applicationContext, target)
