@@ -23,7 +23,9 @@
       "Bash(gh run *)",
       "Bash(unzip -o \"C:/Users/trade/Downloads/build-reports.zip\" -d \"D:/Proyecto_Descargayoutube/cowork/build-reports/\")",
       "Bash(python)",
-      "Bash(unzip -o \"C:/Users/trade/Downloads/logs_65117413894.zip\" -d \"D:/Proyecto_Descargayoutube/cowork/logs2/\")"
+      "Bash(unzip -o \"C:/Users/trade/Downloads/logs_65117413894.zip\" -d \"D:/Proyecto_Descargayoutube/cowork/logs2/\")",
+      "Read(//c/Users/trade/Downloads/**)",
+      "Bash(unzip -o logs_65172856147.zip -d logs_tikget_extract/)"
     ]
   }
 }
