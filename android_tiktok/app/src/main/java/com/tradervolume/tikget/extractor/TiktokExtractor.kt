@@ -51,12 +51,15 @@ class TiktokExtractor(
         .retryOnConnectionFailure(true)
         .build()
 
+    // UA de escritorio: TikTok sirve la página "webapp" completa (con
+    // __UNIVERSAL_DATA_FOR_REHYDRATION__ y webapp.video-detail). Con UA móvil
+    // redirige a m.tiktok.com que usa otro layout.
     private val userAgent =
-        "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 " +
-            "(KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
     fun extract(url: String): TikMedia {
-        val canonical = resolveUrl(url.trim())
+        val canonical = forceDesktopHost(resolveUrl(url.trim()))
         val html = fetchHtml(canonical)
         val data = findUniversalData(html)
             ?: throw IllegalStateException(
@@ -67,6 +70,14 @@ class TiktokExtractor(
     }
 
     // ---- Red ----
+
+    /** Fuerza www.tiktok.com y quita m./vm./vt. — necesario para recibir el JSON webapp. */
+    private fun forceDesktopHost(url: String): String {
+        return url
+            .replace(Regex("^https?://m\\.tiktok\\.com", RegexOption.IGNORE_CASE), "https://www.tiktok.com")
+            .replace(Regex("^https?://vm\\.tiktok\\.com", RegexOption.IGNORE_CASE), "https://www.tiktok.com")
+            .replace(Regex("^https?://vt\\.tiktok\\.com", RegexOption.IGNORE_CASE), "https://www.tiktok.com")
+    }
 
     private fun resolveUrl(url: String): String {
         // Los enlaces vm.tiktok.com y vt.tiktok.com son shorteners con 301/302.
@@ -119,9 +130,17 @@ class TiktokExtractor(
         val scope = root.optJSONObject("__DEFAULT_SCOPE__")
             ?: throw IllegalStateException("JSON sin __DEFAULT_SCOPE__")
 
+        // Buscar video-detail en cualquiera de sus variantes conocidas, o recorrer las
+        // claves de __DEFAULT_SCOPE__ buscando la que contenga itemInfo.itemStruct.
         val videoDetail = scope.optJSONObject("webapp.video-detail")
             ?: scope.optJSONObject("webapp.reflow.video-detail")
-            ?: throw IllegalStateException("Sin video-detail")
+            ?: findVideoDetailFallback(scope)
+            ?: run {
+                val keys = scope.keys().asSequence().toList().joinToString(",")
+                throw IllegalStateException(
+                    "Sin video-detail (claves: ${keys.take(200)})"
+                )
+            }
 
         if (videoDetail.optInt("statusCode", 0) != 0 &&
             videoDetail.optInt("statusCode", -1) != -1
@@ -186,6 +205,18 @@ class TiktokExtractor(
             musicTitle = musicTitle,
             musicUrl = musicUrl
         )
+    }
+
+    /** Recorre las claves de __DEFAULT_SCOPE__ buscando una que contenga itemInfo.itemStruct. */
+    private fun findVideoDetailFallback(scope: JSONObject): JSONObject? {
+        val keys = scope.keys()
+        while (keys.hasNext()) {
+            val k = keys.next()
+            val obj = scope.optJSONObject(k) ?: continue
+            val itemStruct = obj.optJSONObject("itemInfo")?.optJSONObject("itemStruct")
+            if (itemStruct != null) return obj
+        }
+        return null
     }
 
     private fun firstUrlFromBitrate(arr: JSONArray?): String? {

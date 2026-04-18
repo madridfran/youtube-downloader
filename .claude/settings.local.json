@@ -16,7 +16,14 @@
       "Bash(choco --version)",
       "mcp__mcp-registry__search_mcp_registry",
       "Bash(git --version)",
-      "Bash(where git *)"
+      "Bash(where git *)",
+      "Read(//d D:/Proyecto_Descargayoutube/**)",
+      "Bash(dir)",
+      "Bash(unzip -o youtube-downloader-sprints.zip -d extracted/)",
+      "Bash(gh run *)",
+      "Bash(unzip -o \"C:/Users/trade/Downloads/build-reports.zip\" -d \"D:/Proyecto_Descargayoutube/cowork/build-reports/\")",
+      "Bash(python)",
+      "Bash(unzip -o \"C:/Users/trade/Downloads/logs_65117413894.zip\" -d \"D:/Proyecto_Descargayoutube/cowork/logs2/\")"
     ]
   }
 }
