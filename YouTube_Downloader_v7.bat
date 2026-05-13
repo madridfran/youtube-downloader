@@ -24,35 +24,46 @@ if not exist "%SCRIPT%" (
     exit /b 1
 )
 
-:: --- Verificar Python ---
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Python no esta instalado o no esta en PATH.
+:: --- Detectar Python real (evita stubs de Microsoft Store) ---
+set "PYEXE="
+for /f "delims=" %%i in ('where python 2^>nul ^| findstr /i /v "WindowsApps"') do (
+    if not defined PYEXE set "PYEXE=%%i"
+)
+if not defined PYEXE (
+    where py >nul 2>&1
+    if not errorlevel 1 set "PYEXE=py -3"
+)
+if not defined PYEXE (
+    echo [ERROR] No se encontro Python real.
     echo.
-    echo Descarga Python desde: https://www.python.org/downloads/
-    echo Asegurate de marcar "Add Python to PATH" durante la instalacion.
+    echo En PATH solo hay stubs de Microsoft Store. Soluciones:
+    echo  1. Settings ^> Apps ^> Advanced app settings ^> App execution aliases
+    echo     Desactiva los alias de python.exe y python3.exe
+    echo  2. O reinstala Python desde https://www.python.org/downloads/
+    echo     marcando "Add Python to PATH".
     echo.
     pause
     exit /b 1
 )
 
 echo [OK] Python detectado:
-python --version
+"%PYEXE%" --version
+echo   Ruta: %PYEXE%
 echo.
 
 :: --- Dependencias Python (solo paquetes pip) ---
-python -c "import customtkinter" >nul 2>&1
+"%PYEXE%" -c "import customtkinter" >nul 2>&1
 if errorlevel 1 (
     echo [INFO] Instalando customtkinter...
-    python -m pip install customtkinter --user --quiet
-    if errorlevel 1 python -m pip install customtkinter --quiet
+    "%PYEXE%" -m pip install customtkinter --user --quiet
+    if errorlevel 1 "%PYEXE%" -m pip install customtkinter --quiet
 )
 
-python -c "from PIL import Image" >nul 2>&1
+"%PYEXE%" -c "from PIL import Image" >nul 2>&1
 if errorlevel 1 (
     echo [INFO] Instalando Pillow para thumbnails...
-    python -m pip install Pillow --user --quiet
-    if errorlevel 1 python -m pip install Pillow --quiet
+    "%PYEXE%" -m pip install Pillow --user --quiet
+    if errorlevel 1 "%PYEXE%" -m pip install Pillow --quiet
 )
 
 echo [OK] Dependencias Python listas.
@@ -64,7 +75,7 @@ echo.
 
 :: --- Ejecutar aplicacion ---
 cd /d "%ENGINE%"
-python "%SCRIPT%"
+"%PYEXE%" "%SCRIPT%"
 
 if errorlevel 1 (
     echo.
