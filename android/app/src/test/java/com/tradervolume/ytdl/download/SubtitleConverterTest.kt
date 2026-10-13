@@ -26,16 +26,34 @@ class SubtitleConverterTest {
     }
 
     @Test fun ttmlToTxt() {
+        // Texto corrido; la pausa de 9,96 s a 62 s abre un párrafo nuevo.
         assertEquals(
-            "La bolsa toca techo antes de que el\nCapex se frene, mucho's & antes.\nlínea uno\nlínea dos\n",
+            "La bolsa toca techo antes de que el Capex se frene, mucho's & antes.\n\nlínea uno línea dos\n",
             SubtitleConverter.toTxt(ttml)
         )
+    }
+
+    @Test fun txtLongParagraphSplitsAtSentenceEnd() {
+        // 30 frases seguidas (~40 caracteres cada una) sin pausas: > 500 caracteres en total.
+        val cues = (0 until 30).map { i ->
+            SubtitleConverter.Cue(i * 1000L, i * 1000L + 1000, "Frase número $i del discurso, sin pausa.")
+        }
+        val paras = SubtitleConverter.renderTxt(cues).trimEnd().split("\n\n")
+        assertTrue("debe partir en varios párrafos: ${paras.size}", paras.size >= 2)
+        paras.forEach { assertTrue(it.endsWith(".")); assertFalse(it.contains('\n')) }
+    }
+
+    @Test fun txtHardSplitWithoutPunctuation() {
+        val cues = (0 until 100).map { i -> SubtitleConverter.Cue(i * 1000L, i * 1000L + 1000, "palabras sin puntuación $i") }
+        val paras = SubtitleConverter.renderTxt(cues).trimEnd().split("\n\n")
+        assertTrue(paras.size >= 2)
+        paras.forEach { assertTrue(it.length <= 1_500 + 40) }
     }
 
     @Test fun vttRollingToTxtDedupes() {
         val vtt = "WEBVTT\nKind: captions\n\n00:00:01.000 --> 00:00:02.000 align:start\nhola <c>mundo</c>\n\n" +
             "00:00:02.000 --> 00:00:03.000\nhola mundo\nqué tal\n"
-        assertEquals("hola mundo\nqué tal\n", SubtitleConverter.toTxt(vtt))
+        assertEquals("hola mundo qué tal\n", SubtitleConverter.toTxt(vtt))
         assertTrue(SubtitleConverter.toSrt(vtt).startsWith("1\n00:00:01,000 --> 00:00:02,000\nhola mundo"))
     }
 

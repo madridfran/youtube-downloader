@@ -54,20 +54,48 @@ object SubtitleConverter {
         return sb.toString()
     }
 
+    /** Pausa entre cues a partir de la cual se empieza un párrafo nuevo. */
+    private const val PARAGRAPH_GAP_MS = 2_000L
+    /** Longitud a partir de la cual se corta el párrafo en el siguiente final de frase. */
+    private const val PARAGRAPH_SOFT_MAX = 500
+    /** Corte forzado para subtítulos automáticos sin puntuación ni pausas. */
+    private const val PARAGRAPH_HARD_MAX = 1_500
+
+    /**
+     * Texto corrido: las líneas de cada párrafo se unen con espacios y los párrafos se
+     * separan con una línea en blanco (pausa larga o párrafo demasiado largo).
+     */
     fun renderTxt(cues: List<Cue>): String {
         val sb = StringBuilder()
+        val para = StringBuilder()
         val recent = ArrayDeque<String>()
+        var prevEnd: Long? = null
+
+        fun flush() {
+            if (para.isEmpty()) return
+            if (sb.isNotEmpty()) sb.append('\n')
+            sb.append(para).append('\n')
+            para.setLength(0)
+        }
+
         for (c in cues) {
+            prevEnd?.let { if (c.startMs - it >= PARAGRAPH_GAP_MS) flush() }
+            prevEnd = maxOf(prevEnd ?: c.endMs, c.endMs)
             for (raw in c.text.lines()) {
                 val line = raw.trim()
                 if (line.isEmpty()) continue
                 // Los VTT automáticos repiten la línea anterior en el cue siguiente.
                 if (line in recent) continue
-                sb.append(line).append('\n')
                 recent.addLast(line)
                 if (recent.size > 3) recent.removeFirst()
+
+                val sentenceEnd = para.isNotEmpty() && para.last() in ".?!…"
+                if ((para.length >= PARAGRAPH_SOFT_MAX && sentenceEnd) || para.length >= PARAGRAPH_HARD_MAX) flush()
+                if (para.isNotEmpty()) para.append(' ')
+                para.append(line)
             }
         }
+        flush()
         return sb.toString()
     }
 

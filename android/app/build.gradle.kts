@@ -20,8 +20,8 @@ android {
         applicationId = "com.tradervolume.ytdl"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.3.0"
+        versionCode = 3
+        versionName = "1.3.1"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -125,13 +125,12 @@ dependencies {
     // Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // NewPipeExtractor (via JitPack)
-    // Usamos la rama dev para tener los últimos parches del cifrado de YouTube.
-    // Si YouTube rompe el extractor, bumpea esta línea a la última tag estable
-    // desde https://github.com/TeamNewPipe/NewPipeExtractor/releases
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:dev-SNAPSHOT") {
-        isChanging = true
-    }
+    // NewPipeExtractor (via JitPack), fijado a un commit de la rama dev para que las
+    // compilaciones sean reproducibles (antes dev-SNAPSHOT: cada build podía traer otro código).
+    // 8443c91bf4 = cabeza de dev el 2026-10-13, la misma que resolvió la compilación de la 1.3.0.
+    // Si YouTube rompe el extractor: poner aquí el hash corto del último commit de
+    // https://github.com/TeamNewPipe/NewPipeExtractor/commits/dev y recompilar.
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:8443c91bf4")
     // Rhino motor JS que NewPipe usa para desofuscar el signatureCipher.
     // Lo declaramos explícito por si JitPack no pasa la dep transitiva.
     implementation("org.mozilla:rhino:1.7.14")
