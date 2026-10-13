@@ -18,6 +18,21 @@ enum class SubsFormat(val label: String) {
     val wantsTxt get() = this == TXT || this == BOTH
 }
 
+/**
+ * Pseudo-idioma de subtítulos que viaja junto a los códigos ISO ("es", "en"):
+ * [ORIGINAL] = la pista del idioma hablado del vídeo (zh, hi, ur…), sea cual sea.
+ *
+ * La traducción automática de YouTube (parámetro tlang) se probó el 2026-10-13 y no es viable:
+ * HTTP 429 desde NewPipe y desde yt-dlp; el cliente web exige un PO token para esas pistas.
+ */
+object SubsLang {
+    const val ORIGINAL = "orig"
+
+    fun isOriginal(token: String) = token == ORIGINAL
+
+    fun label(token: String): String = if (isOriginal(token)) "idioma original" else token.uppercase()
+}
+
 class DownloadRepository(private val context: Context) {
 
     fun enqueue(

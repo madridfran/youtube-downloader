@@ -42,6 +42,7 @@ import com.tradervolume.ytdl.download.DownloadMode
 import com.tradervolume.ytdl.download.HistoryEntry
 import com.tradervolume.ytdl.download.ShareHelper
 import com.tradervolume.ytdl.download.SubsFormat
+import com.tradervolume.ytdl.download.SubsLang
 import com.tradervolume.ytdl.ui.MainViewModel
 import com.tradervolume.ytdl.ui.PlaylistPreviewItem
 import com.tradervolume.ytdl.ui.components.LogoYD
@@ -180,7 +181,7 @@ private fun PantallaPrincipal(urlInicial: String?) {
                     } else if (plusVideo) {
                         "Vídeo + subtítulos encolados (${subsFormat.label})"
                     } else {
-                        "Solo subtítulos ${langs.joinToString("+") { it.uppercase() }} encolados (${subsFormat.label})"
+                        "Solo subtítulos ${langs.joinToString("+") { SubsLang.label(it) }} encolados (${subsFormat.label})"
                     }
                 }
             )
@@ -457,6 +458,11 @@ private fun SubtitulosGrid(
             CeldaSubs("ES", Modifier.weight(1f)) { onAccion(setOf("es"), false) }
             CeldaSubs("EN", Modifier.weight(1f)) { onAccion(setOf("en"), false) }
             CeldaSubs("ES + EN", Modifier.weight(1f)) { onAccion(setOf("es", "en"), false) }
+        }
+        Spacer(Modifier.height(8.dp))
+        // Idioma hablado del vídeo (chino, hindi, urdu…), el que haya
+        CeldaSubs("Idioma original del vídeo", Modifier.fillMaxWidth()) {
+            onAccion(setOf(SubsLang.ORIGINAL), false)
         }
         Spacer(Modifier.height(8.dp))
         CeldaSubs("Vídeo + subtítulos ES/EN", Modifier.fillMaxWidth()) { onAccion(setOf("es", "en"), true) }
