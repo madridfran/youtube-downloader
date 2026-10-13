@@ -11,7 +11,12 @@ enum class DownloadMode {
     VIDEO, AUDIO_MP3, SUBTITLES, VIDEO_PLUS_SUBS, PLAYLIST_VIDEO, PLAYLIST_MP3
 }
 
-enum class SubsFormat { SRT, TXT }
+enum class SubsFormat(val label: String) {
+    SRT("SRT"), TXT("TXT"), BOTH("SRT + TXT");
+
+    val wantsSrt get() = this == SRT || this == BOTH
+    val wantsTxt get() = this == TXT || this == BOTH
+}
 
 class DownloadRepository(private val context: Context) {
 

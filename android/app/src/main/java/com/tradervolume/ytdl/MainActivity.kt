@@ -103,12 +103,11 @@ class MainActivity : ComponentActivity() {
 private fun PantallaPrincipal(urlInicial: String?) {
     val vm: MainViewModel = viewModel()
     var url by remember { mutableStateOf(urlInicial ?: "") }
-    var subsEnTxt by remember { mutableStateOf(false) }
+    var subsFormat by remember { mutableStateOf(SubsFormat.SRT) }
     var estado by remember { mutableStateOf<String?>(null) }
     val scroll = rememberScrollState()
     val history by vm.history.collectAsState()
     val playlist by vm.playlist.collectAsState()
-    val subsFormat = if (subsEnTxt) SubsFormat.TXT else SubsFormat.SRT
 
     // Refrescar historial al recomponer (p.ej. tras descarga)
     LaunchedEffect(Unit) { vm.reloadHistory() }
@@ -166,15 +165,23 @@ private fun PantallaPrincipal(urlInicial: String?) {
 
             // Subtítulos — grid 2x2
             SubtitulosGrid(
-                subsEnTxt = subsEnTxt,
-                onToggleTxt = { subsEnTxt = it },
+                formato = subsFormat,
+                onFormato = { subsFormat = it },
                 onAccion = { langs, plusVideo ->
-                    if (plusVideo) {
-                        vm.onVideoPlusSubs(url, langs, subsFormat)
-                    } else {
-                        vm.onSubtitles(url, langs, subsFormat)
+                    if (url.isNotBlank()) {
+                        if (plusVideo) {
+                            vm.onVideoPlusSubs(url, langs, subsFormat)
+                        } else {
+                            vm.onSubtitles(url, langs, subsFormat)
+                        }
                     }
-                    estado = "Subtítulos encolados (${subsFormat.name})"
+                    estado = if (url.isBlank()) {
+                        "Pega primero una URL de YouTube"
+                    } else if (plusVideo) {
+                        "Vídeo + subtítulos encolados (${subsFormat.label})"
+                    } else {
+                        "Solo subtítulos ${langs.joinToString("+") { it.uppercase() }} encolados (${subsFormat.label})"
+                    }
                 }
             )
 
@@ -388,8 +395,8 @@ private fun TiraHistorial(entries: List<HistoryEntry>, onVerTodo: () -> Unit) {
 
 @Composable
 private fun SubtitulosGrid(
-    subsEnTxt: Boolean,
-    onToggleTxt: (Boolean) -> Unit,
+    formato: SubsFormat,
+    onFormato: (SubsFormat) -> Unit,
     onAccion: (langs: Set<String>, plusVideo: Boolean) -> Unit
 ) {
     Column {
@@ -407,27 +414,52 @@ private fun SubtitulosGrid(
                 fontSize = 15.sp,
                 modifier = Modifier.weight(1f)
             )
-            Text(
-                if (subsEnTxt) "TXT" else "SRT",
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.width(4.dp))
-            Switch(
-                checked = subsEnTxt,
-                onCheckedChange = onToggleTxt
-            )
         }
         Spacer(Modifier.height(8.dp))
+        // Selector de formato: SRT | TXT | Ambos
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .border(1.dp, Color(0xFF2F2F2F), RoundedCornerShape(12.dp))
+        ) {
+            listOf(
+                SubsFormat.SRT to "SRT",
+                SubsFormat.TXT to "TXT",
+                SubsFormat.BOTH to "Ambos"
+            ).forEach { (f, etiqueta) ->
+                val activo = f == formato
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .background(if (activo) YdRed else Color.Transparent)
+                        .clickable { onFormato(f) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        etiqueta,
+                        fontSize = 13.sp,
+                        fontWeight = if (activo) FontWeight.Bold else FontWeight.Medium,
+                        color = if (activo) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Solo subtítulos (sin vídeo ni audio):",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CeldaSubs("ES", Modifier.weight(1f)) { onAccion(setOf("es"), false) }
             CeldaSubs("EN", Modifier.weight(1f)) { onAccion(setOf("en"), false) }
+            CeldaSubs("ES + EN", Modifier.weight(1f)) { onAccion(setOf("es", "en"), false) }
         }
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CeldaSubs("ES + EN", Modifier.weight(1f)) { onAccion(setOf("es", "en"), false) }
-            CeldaSubs("+ Vídeo", Modifier.weight(1f)) { onAccion(setOf("es", "en"), true) }
-        }
+        CeldaSubs("Vídeo + subtítulos ES/EN", Modifier.fillMaxWidth()) { onAccion(setOf("es", "en"), true) }
     }
 }
 

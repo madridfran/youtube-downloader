@@ -1,6 +1,15 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+// Firma estable: si existe keystore.properties (no versionado) se usa esa clave,
+// así las actualizaciones se instalan encima sin desinstalar. Si no, debug.keystore.
+val ksProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -11,12 +20,21 @@ android {
         applicationId = "com.tradervolume.ytdl"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.3.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
     signingConfigs {
+        create("ydownRelease") {
+            val path = ksProps.getProperty("storeFile")
+            if (path != null) {
+                storeFile = rootProject.file(path)
+                storePassword = ksProps.getProperty("storePassword")
+                keyAlias = ksProps.getProperty("keyAlias")
+                keyPassword = ksProps.getProperty("keyPassword")
+            }
+        }
         create("releaseDebugSigned") {
             val ks = file(System.getProperty("user.home") + "/.android/debug.keystore")
             if (ks.exists()) {
@@ -32,7 +50,10 @@ android {
         release {
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("releaseDebugSigned")
+            signingConfig = if (ksProps.getProperty("storeFile") != null)
+                signingConfigs.getByName("ydownRelease")
+            else
+                signingConfigs.getByName("releaseDebugSigned")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {
