@@ -1,6 +1,7 @@
 package com.tradervolume.ytdl.ui
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -16,8 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tradervolume.ytdl.download.FolderCleaner
 import com.tradervolume.ytdl.download.HistoryEntry
 import com.tradervolume.ytdl.download.HistoryStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.tradervolume.ytdl.download.ShareHelper
 import com.tradervolume.ytdl.ui.components.YtThumb
 import com.tradervolume.ytdl.ui.theme.YDownTheme
@@ -39,8 +44,66 @@ class HistoryActivity : ComponentActivity() {
 @Composable
 private fun PantallaHistorial() {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     var entries by remember { mutableStateOf(HistoryStore.loadAll(ctx)) }
     fun refresh() { entries = HistoryStore.loadAll(ctx) }
+
+    // null = diálogo cerrado; con datos = lo que se va a borrar
+    var confirmar by remember { mutableStateOf<FolderCleaner.Stats?>(null) }
+    var borrando by remember { mutableStateOf(false) }
+
+    confirmar?.let { st ->
+        AlertDialog(
+            onDismissRequest = { if (!borrando) confirmar = null },
+            title = { Text("Vaciar carpeta") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (st.count == 0) {
+                        Text("No hay archivos de YDown en Descargas/YouTubeDownloader.")
+                    } else {
+                        Text(
+                            "Se borrarán ${st.count} archivos (${formatBytes(st.bytes)}) de " +
+                                "Descargas/YouTubeDownloader y se limpiará el historial. No se puede deshacer.",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Text(
+                        "Los archivos que no descargó esta instalación de YDown (versiones anteriores o copiados " +
+                            "desde otro sitio) Android no deja verlos desde la app: bórralos con Mis Archivos.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                if (st.count > 0) {
+                    TextButton(
+                        enabled = !borrando,
+                        onClick = {
+                            borrando = true
+                            scope.launch {
+                                val hecho = withContext(Dispatchers.IO) { FolderCleaner.deleteAll(ctx) }
+                                HistoryStore.clear(ctx)
+                                refresh()
+                                borrando = false
+                                confirmar = null
+                                Toast.makeText(
+                                    ctx,
+                                    "Borrados ${hecho.count} archivos (${formatBytes(hecho.bytes)})",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    ) { Text(if (borrando) "Borrando…" else "Borrar todo", color = YdRed) }
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !borrando, onClick = { confirmar = null }) {
+                    Text(if (st.count == 0) "Cerrar" else "Cancelar")
+                }
+            }
+        )
+    }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -51,10 +114,19 @@ private fun PantallaHistorial() {
                     fontSize = 22.sp,
                     modifier = Modifier.weight(1f)
                 )
+                // Solo la lista: los archivos siguen en el móvil
                 TextButton(onClick = { HistoryStore.clear(ctx); refresh() }) {
-                    Text("Vaciar")
+                    Text("Limpiar lista")
                 }
             }
+            // Archivos de verdad, con confirmación
+            OutlinedButton(
+                onClick = {
+                    scope.launch { confirmar = withContext(Dispatchers.IO) { FolderCleaner.stats(ctx) } }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            ) { Text("Vaciar carpeta (borrar archivos)", color = YdRed) }
             Spacer(Modifier.height(8.dp))
 
             if (entries.isEmpty()) {
@@ -126,8 +198,9 @@ private fun EntryCard(entry: HistoryEntry, onDeleted: () -> Unit) {
                         AccionPeq("IG") { ShareHelper.shareTo(ctx, entry, ShareHelper.PKG_INSTAGRAM) }
                     }
                 }
+                // Solo la entrada de la lista; el archivo se queda en el móvil
                 TextButton(onClick = { HistoryStore.remove(ctx, entry.id); onDeleted() }) {
-                    Text("Borrar", fontSize = 11.sp)
+                    Text("Quitar de la lista", fontSize = 11.sp)
                 }
             }
         }
