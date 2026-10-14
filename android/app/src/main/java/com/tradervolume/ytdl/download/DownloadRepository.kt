@@ -2,14 +2,11 @@ package com.tradervolume.ytdl.download
 
 import android.content.Context
 import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.workDataOf
-
-enum class DownloadMode {
-    VIDEO, AUDIO_MP3, SUBTITLES, VIDEO_PLUS_SUBS, PLAYLIST_VIDEO, PLAYLIST_MP3
-}
+import java.util.UUID
 
 enum class SubsFormat(val label: String) {
     SRT("SRT"), TXT("TXT"), BOTH("SRT + TXT");
@@ -33,26 +30,37 @@ object SubsLang {
     fun label(token: String): String = if (isOriginal(token)) "idioma original" else token.uppercase()
 }
 
+/**
+ * Cola de descargas: una cadena única de WorkManager, así se bajan de una en una y en orden
+ * (en paralelo se pisaban las notificaciones y YouTube corta antes con HTTP 429).
+ * El worker devuelve siempre success para que un fallo no cancele el resto de la cadena.
+ */
 class DownloadRepository(private val context: Context) {
 
-    fun enqueue(
-        url: String,
-        mode: DownloadMode,
-        subLangs: Set<String> = setOf("es", "en"),
-        subsFormat: SubsFormat = SubsFormat.SRT
-    ) {
-        val data = workDataOf(
-            DownloadWorker.KEY_URL to url,
-            DownloadWorker.KEY_MODE to mode.name,
-            DownloadWorker.KEY_SUB_LANGS to subLangs.joinToString(","),
-            DownloadWorker.KEY_SUBS_FORMAT to subsFormat.name
-        )
+    companion object {
+        const val QUEUE = "ydown-queue"
+        const val TAG = "ydown"
+        const val TAG_TITLE_PREFIX = "title:"
+    }
+
+    fun enqueue(url: String, spec: DownloadSpec, index: Int? = null, title: String? = null): UUID {
         val req = OneTimeWorkRequestBuilder<DownloadWorker>()
-            .setInputData(data)
-            .setConstraints(
-                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-            )
+            .setInputData(spec.toData(url, index, title))
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .addTag(TAG)
+            .addTag(TAG_TITLE_PREFIX + (title ?: url))
             .build()
-        WorkManager.getInstance(context).enqueue(req)
+        WorkManager.getInstance(context).enqueueUniqueWork(QUEUE, ExistingWorkPolicy.APPEND_OR_REPLACE, req)
+        return req.id
+    }
+
+    /**
+     * Cancela un elemento sin romper la cadena: cancelWorkById también cancelaría todos los
+     * que van detrás, así que se marca y el propio worker se detiene (o se salta al empezar).
+     */
+    fun cancel(id: UUID) = CancelRegistry.cancel(id)
+
+    fun cancelAll() {
+        WorkManager.getInstance(context).cancelUniqueWork(QUEUE)
     }
 }

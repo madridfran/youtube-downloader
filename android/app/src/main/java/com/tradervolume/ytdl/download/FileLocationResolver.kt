@@ -57,6 +57,14 @@ object FileLocationResolver {
             target.file!!.outputStream()
         }
 
+    /** Elimina un archivo a medio escribir (cancelación o error) para no dejar restos en Descargas. */
+    fun discard(context: Context, target: Target) {
+        runCatching {
+            if (target.uri != null) context.contentResolver.delete(target.uri, null, null)
+            else target.file?.delete()
+        }
+    }
+
     fun markComplete(context: Context, target: Target) {
         if (target.uri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val values = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }

@@ -1,8 +1,12 @@
 package com.tradervolume.ytdl.extractor
 
+import com.tradervolume.ytdl.download.AudioFormat
+import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 import org.schabi.newpipe.extractor.stream.AudioStream
+import org.schabi.newpipe.extractor.stream.AudioTrackType
+import org.schabi.newpipe.extractor.stream.DeliveryMethod
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.SubtitlesStream
 import org.schabi.newpipe.extractor.stream.VideoStream
@@ -97,8 +101,56 @@ class YoutubeExtractor(downloader: OkHttpDownloader) {
             .filter { !it.isVideoOnly }
             .maxByOrNull { it.resolution?.filter { c -> c.isDigit() }?.toIntOrNull() ?: 0 }
 
-    fun pickBestAudio(info: StreamInfo): AudioStream? =
-        info.audioStreams.maxByOrNull { it.averageBitrate }
+    /**
+     * Vídeo sin audio en MP4/H.264 (lo único que MediaMuxer une a AAC sin recodificar), la mayor
+     * altura que no pase de [maxHeight]. YouTube suele darlo hasta 1080p (itag 137).
+     */
+    fun pickVideoOnlyAvc(info: StreamInfo, maxHeight: Int): VideoStream? =
+        info.videoOnlyStreams
+            .filter {
+                it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP &&
+                    it.format == MediaFormat.MPEG_4 && it.codec?.startsWith("avc1") == true &&
+                    tierOf(it) in 1..maxHeight
+            }
+            .maxWithOrNull(compareBy<VideoStream>({ tierOf(it) }, { it.fps }, { it.bitrate }))
+
+    companion object {
+        /**
+         * Calidad como la etiqueta YouTube ("720p"), no la altura en píxeles: un vídeo 1280×616
+         * (no 16:9) es "720p". Equivale a max(lado corto, lado largo × 9/16).
+         */
+        fun tierOf(width: Int, height: Int): Int =
+            maxOf(minOf(width, height), maxOf(width, height) * 9 / 16)
+
+        fun tierOf(s: VideoStream): Int = tierOf(s.width, s.height)
+    }
+
+    /**
+     * Audio. En vídeos doblados (varias pistas de audio) se usa la original, no un doblaje.
+     * M4A = AAC (necesario para unir con el vídeo HD); OPUS = WebM/Opus.
+     */
+    fun pickAudio(info: StreamInfo, format: AudioFormat): AudioStream? {
+        val usable = info.audioStreams.filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
+        val original = usable.filter { it.audioTrackType == null || it.audioTrackType == AudioTrackType.ORIGINAL }
+            .ifEmpty { usable }
+        val wanted = original.filter {
+            when (format) {
+                AudioFormat.M4A -> it.format == MediaFormat.M4A
+                AudioFormat.OPUS -> it.format == MediaFormat.WEBMA_OPUS || it.format == MediaFormat.WEBMA ||
+                    it.format == MediaFormat.OPUS
+            }
+        }
+        return wanted.ifEmpty { original }.maxByOrNull { maxOf(it.averageBitrate, it.bitrate) }
+    }
+
+    /** ID de lista de un enlace (playlist?list=… o watch?v=…&list=…). */
+    fun playlistIdOf(url: String): String? = Regex("""[?&]list=([A-Za-z0-9_-]+)""").find(url)?.groupValues?.get(1)
+
+    /** Carga la lista aunque el enlace sea de un vídeo dentro de ella. Los mixes (RD…) necesitan el enlace original. */
+    fun extractPlaylistOf(url: String): ExtractedContent.Playlist {
+        val id = playlistIdOf(url) ?: return extractPlaylist(url)
+        return extractPlaylist(if (id.startsWith("RD")) url else "https://www.youtube.com/playlist?list=$id")
+    }
 
     /**
      * @param languages ISO 639-1 codes (e.g. "es", "en"). Matches against the base language tag.
